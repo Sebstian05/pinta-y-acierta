@@ -24,14 +24,16 @@ Aquí tienes un ejemplo de cómo podrías empezar a implementar la funcionalidad
 
 Kotlin
 
-// Dependencia para WebSockets
-implementation("org.java-websocket:Java-WebSocket:1.5.2")
 
-// Clase para manejar la conexión WebSocket
-class DrawingWebSocketClient(serverUri: URI) : WebSocketClient(serverUri) {
+    implementation("org.java-websocket:Java-WebSocket:1.5.2")
+    // Dependencia para WebSockets
+
+
+    class DrawingWebSocketClient(serverUri: URI) : WebSocketClient(serverUri) {
     override fun onOpen(handshakedata: ServerHandshake?) {
         println("Conexión abierta")
     }
+    // Clase para manejar la conexión WebSocket
 
     override fun onMessage(message: String?) {
         // Manejar los mensajes recibidos (actualizar el dibujo)
