@@ -10,165 +10,183 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.tooling.preview.Preview
-import com.example.pintaygana.ui.theme.PintaYGanaTheme
-import android.view.View
-import androidx.compose.ui.viewinterop.AndroidView
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
-
-
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.viewinterop.AndroidView
 
 class MainActivity : ComponentActivity() {
-        override fun onCreate(savedInstanceState: Bundle?) {
-            super.onCreate(savedInstanceState)
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
 
-            setContent {
-                PintaYGanaTheme {
-                    // Definimos un estado para el color de dibujo
-                    var selectedColor by remember { mutableStateOf(android.graphics.Color.BLACK) }
+        setContent {
+            // Controlador del teclado y gestor de enfoque
+            val keyboardController = LocalSoftwareKeyboardController.current
+            val focusManager = LocalFocusManager.current
 
-                    // Inicializa la referencia a drawingView como mutable
-                    var drawingView: DrawingView? = null
+            // Variable de estado para el color seleccionado
+            var selectedColor by remember { mutableStateOf(android.graphics.Color.BLACK) }
+            var drawingView: DrawingView? = null
 
-                    Box(modifier = Modifier.fillMaxSize()) {
-                        // Vista de Dibujo (DrawingView)
-                        AndroidView(
-                            factory = { context ->
-                                DrawingView(context, null).also { view ->
-                                    drawingView = view
-                                    // Establece el color inicial después de crear el DrawingView
-                                    view.setColor(selectedColor)
-                                }
-                            },
-                            modifier = Modifier
-                                .fillMaxSize()
-                        )
+            // Variable de estado para el texto en la caja de chat
+            var textState by remember { mutableStateOf(TextFieldValue("")) }
 
-                        // Botón para borrar
-                        Button(
-                            onClick = {
-                                drawingView?.clearCanvas()  // Llama la función de borrado
-                            },
-                            modifier = Modifier
-                                .padding(16.dp)
-                                .align(Alignment.TopStart)
-                        ) {
-                            Text(
-                                "Borrar",
-                                color = Color.White
-                            )
+            // Caja que detecta toques para ocultar el teclado
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .pointerInput(Unit) {
+                        detectTapGestures(onTap = {
+                            focusManager.clearFocus() // Limpia el foco para ocultar el teclado
+                        })
+                    }
+            ) {
+                // Vista de Dibujo (DrawingView)
+                AndroidView(
+                    factory = { context ->
+                        DrawingView(context, null).also { view ->
+                            drawingView = view
+                            view.setColor(selectedColor)
                         }
+                    },
+                    modifier = Modifier.fillMaxSize()
+                )
 
-                        // Fila con los 3 botones circulares de colores en la esquina superior derecha
-                        Row(
-                            modifier = Modifier
-                                .padding(16.dp)
-                                .align(Alignment.TopEnd)
-                        ) {
-                            // Botón Amarillo
-                            Button(
-                                onClick = {
-                                    selectedColor = android.graphics.Color.YELLOW
-                                    drawingView?.setColor(selectedColor) // Cambia el color a amarillo
-                                },
-                                modifier = Modifier
-                                    .size(50.dp)  // Tamaño circular
-                                    .clip(CircleShape)
-                                    .background(Color.Yellow),  // Fondo amarillo
-                                colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent), // Para evitar efectos adicionales
-                                contentPadding = PaddingValues(0.dp) // Sin padding adicional
-                            ) {}
+                // Botón para borrar
+                Button(
+                    onClick = {
+                        drawingView?.clearCanvas()  // Llama la función de borrado
+                    },
+                    modifier = Modifier
+                        .padding(16.dp)
+                        .align(Alignment.TopStart)
+                ) {
+                    Text("Borrar", color = Color.White)
+                }
 
-                            Spacer(modifier = Modifier.width(8.dp)) // Espacio entre los botones
+                // Fila con botones de colores
+                Row(
+                    modifier = Modifier
+                        .padding(16.dp)
+                        .align(Alignment.TopEnd)
+                ) {
+                    colorButton(Color.Yellow, android.graphics.Color.YELLOW) {
+                        selectedColor = it
+                        drawingView?.setColor(selectedColor)
+                    }
 
-                            // Botón Azul
-                            Button(
-                                onClick = {
-                                    selectedColor = android.graphics.Color.BLUE
-                                    drawingView?.setColor(selectedColor) // Cambia el color a azul
-                                },
-                                modifier = Modifier
-                                    .size(50.dp)
-                                    .clip(CircleShape)
-                                    .background(Color.Blue),  // Fondo azul
-                                colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
-                                contentPadding = PaddingValues(0.dp)
-                            ) {}
+                    Spacer(modifier = Modifier.width(8.dp))
 
-                            Spacer(modifier = Modifier.width(8.dp))
+                    colorButton(Color.Blue, android.graphics.Color.BLUE) {
+                        selectedColor = it
+                        drawingView?.setColor(selectedColor)
+                    }
 
-                            // Botón Rojo
-                            Button(
-                                onClick = {
-                                    selectedColor = android.graphics.Color.RED
-                                    drawingView?.setColor(selectedColor) // Cambia el color a rojo
-                                },
-                                modifier = Modifier
-                                    .size(50.dp)
-                                    .clip(CircleShape)
-                                    .background(Color.Red),  // Fondo rojo
-                                colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
-                                contentPadding = PaddingValues(0.dp)
-                            ) {}
+                    Spacer(modifier = Modifier.width(8.dp))
 
-                            Spacer(modifier = Modifier.width(8.dp))
+                    colorButton(Color.Red, android.graphics.Color.RED) {
+                        selectedColor = it
+                        drawingView?.setColor(selectedColor)
+                    }
 
-                            Button(
-                                onClick = {
-                                    selectedColor = android.graphics.Color.rgb(128, 51, 255)
-                                    drawingView?.setColor(selectedColor) // Cambia el color a VIOLETA
-                                },
-                                modifier = Modifier
-                                    .size(50.dp)
-                                    .clip(CircleShape)
-                                    .background(Color(0xFF8033FF)),  // Fondo rojo
-                                colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
-                                contentPadding = PaddingValues(0.dp)
-                            ) {}
+                    Spacer(modifier = Modifier.width(8.dp))
 
-                            Spacer(modifier = Modifier.width(8.dp))
+                    colorButton(Color(0xFF8033FF), android.graphics.Color.rgb(128, 51, 255)) {
+                        selectedColor = it
+                        drawingView?.setColor(selectedColor)
+                    }
 
-                            Button(
-                                onClick = {
-                                    selectedColor = android.graphics.Color.GREEN
-                                    drawingView?.setColor(selectedColor) // Cambia el color a verde
-                                },
-                                modifier = Modifier
-                                    .size(50.dp)
-                                    .clip(CircleShape)
-                                    .background(Color.Green),  // Fondo rojo
-                                colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
-                                contentPadding = PaddingValues(0.dp)
-                            ) {}
+                    Spacer(modifier = Modifier.width(8.dp))
 
-                            Spacer(modifier = Modifier.width(8.dp))
+                    colorButton(Color.Green, android.graphics.Color.GREEN) {
+                        selectedColor = it
+                        drawingView?.setColor(selectedColor)
+                    }
 
-                            Button(
-                                onClick = {
-                                    selectedColor = android.graphics.Color.rgb(255, 165, 0)
-                                    drawingView?.setColor(selectedColor) // Cambia el color a naranja
-                                },
-                                modifier = Modifier
-                                    .size(50.dp)
-                                    .clip(CircleShape)
-                                    .background(Color(0xFFFFA500)),  // Fondo rojo
-                                colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
-                                contentPadding = PaddingValues(0.dp)
-                            ) {}
+                    Spacer(modifier = Modifier.width(8.dp))
+
+                    colorButton(Color(0xFFFFA500), android.graphics.Color.rgb(255, 165, 0)) {
+                        selectedColor = it
+                        drawingView?.setColor(selectedColor)
+                    }
+                }
+
+                // Caja de texto y botón de enviar
+                Column(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth()
+                        .padding(16.dp)
+                ) {
+                    BasicTextField(
+                        value = textState,
+                        onValueChange = { textState = it },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(Color.White)
+                            .padding(8.dp),
+                        keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Done),
+                        keyboardActions = KeyboardActions(
+                            onDone = {
+                                // Limpia el foco y cierra el teclado cuando se pulsa "Done"
+                                focusManager.clearFocus()
+                                keyboardController?.hide()
+                            }
+                        )
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Button(
+                        onClick = {
+                            if (textState.text.isNotEmpty()) {
+                                // Procesa el texto (por ejemplo, enviarlo o guardarlo)
+                                println("Texto enviado: ${textState.text}")
+
+                                // Limpia el campo de texto después de enviar
+                                textState = TextFieldValue("")
+
+                                // Limpia el foco y oculta el teclado
+                                focusManager.clearFocus()
+                                keyboardController?.hide()
+                            }
+                        },
+                        modifier = Modifier.align(Alignment.End)
+                    ) {
+                        Text("Enviar")
+                    }
+                }
+
+                // Efecto desechable para manejar la limpieza del foco al ocultar el teclado
+                DisposableEffect(Unit) {
+                    onDispose {
+                        focusManager.clearFocus()
+                        keyboardController?.hide()
                     }
                 }
             }
         }
     }
+
+    @Composable
+    fun colorButton(backgroundColor: Color, androidColor: Int, onClick: (Int) -> Unit) {
+        Button(
+            onClick = { onClick(androidColor) },
+            modifier = Modifier
+                .size(50.dp)
+                .clip(CircleShape)
+                .background(backgroundColor),
+            colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
+            contentPadding = PaddingValues(0.dp)
+        ) {}
+    }
 }
-
-
-
-
-
-
-
-
-
