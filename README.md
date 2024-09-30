@@ -46,16 +46,16 @@ Kotlin
     override fun onError(ex: Exception?) {
         ex?.printStackTrace()
     }
-}
-
-// En tu actividad principal
-val webSocketClient = DrawingWebSocketClient(URI("ws://tu-servidor-websocket"))
-webSocketClient.connect()
-
-// En tu DrawingView, envía los datos de dibujo a través del WebSocket
-fun enviarDatosDeDibujo(x: Float, y: Float) {
-    val datos = JSONObject()
-    datos.put("x", x)
-    datos.put("y", y)
-    webSocketClient.send(datos.toString())
-}
+    }
+    
+    // En tu actividad principal
+    val webSocketClient = DrawingWebSocketClient(URI("ws://tu-servidor-websocket"))
+    webSocketClient.connect()
+    
+    // En tu DrawingView, envía los datos de dibujo a través del WebSocket
+    fun enviarDatosDeDibujo(x: Float, y: Float) {
+        val datos = JSONObject()
+        datos.put("x", x)
+        datos.put("y", y)
+        webSocketClient.send(datos.toString())
+    }
