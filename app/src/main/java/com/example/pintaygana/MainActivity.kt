@@ -23,155 +23,186 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
         setContent {
-            // Controlador del teclado y gestor de enfoque
-            val keyboardController = LocalSoftwareKeyboardController.current
-            val focusManager = LocalFocusManager.current
+            val navController = rememberNavController()
 
-            // Variable de estado para el color seleccionado
-            var selectedColor by remember { mutableStateOf(android.graphics.Color.BLACK) }
-            var drawingView: DrawingView? = null
+            NavHost(navController = navController, startDestination = "start_screen") {
+                // Pantalla de inicio para ingresar el nombre
+                composable("start_screen") {
+                    StartScreen(navController)
+                }
 
-            // Variable de estado para el texto en la caja de chat
-            var textState by remember { mutableStateOf(TextFieldValue("")) }
+                // Pantalla de dibujo
+                composable("drawing_screen/{playerName}") { backStackEntry ->
+                    val playerName = backStackEntry.arguments?.getString("playerName") ?: "Unknown"
+                    DrawingScreen(playerName)
+                }
+            }
+        }
+    }
 
-            // Caja que detecta toques para ocultar el teclado
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .pointerInput(Unit) {
-                        detectTapGestures(onTap = {
-                            focusManager.clearFocus() // Limpia el foco para ocultar el teclado
-                        })
+    // Pantalla de dibujo modificada para recibir y mostrar el nombre del jugador
+    @Composable
+    fun DrawingScreen(playerName: String) {
+        // Controlador del teclado y gestor de enfoque
+        val keyboardController = LocalSoftwareKeyboardController.current
+        val focusManager = LocalFocusManager.current
+
+        // Variable de estado para el color seleccionado
+        var selectedColor by remember { mutableStateOf(android.graphics.Color.BLACK) }
+        var drawingView: DrawingView? = null
+
+        // Variable de estado para el texto en la caja de chat
+        var textState by remember { mutableStateOf(TextFieldValue("")) }
+
+        // Caja que detecta toques para ocultar el teclado
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .pointerInput(Unit) {
+                    detectTapGestures(onTap = {
+                        focusManager.clearFocus() // Limpia el foco para ocultar el teclado
+                    })
+                }
+        ) {
+            // Vista de Dibujo (DrawingView)
+            AndroidView(
+                factory = { context ->
+                    DrawingView(context, null).also { view ->
+                        drawingView = view
+                        view.setColor(selectedColor)
                     }
+                },
+                modifier = Modifier.fillMaxSize()
+            )
+
+            // Botón para borrar
+            Button(
+                onClick = {
+                    drawingView?.clearCanvas()  // Llama la función de borrado
+                },
+                modifier = Modifier
+                    .padding(16.dp)
+                    .align(Alignment.TopStart)
             ) {
-                // Vista de Dibujo (DrawingView)
-                AndroidView(
-                    factory = { context ->
-                        DrawingView(context, null).also { view ->
-                            drawingView = view
-                            view.setColor(selectedColor)
+                Text("Borrar", color = Color.White)
+            }
+
+            // Fila con botones de colores
+            Row(
+                modifier = Modifier
+                    .padding(16.dp)
+                    .align(Alignment.TopEnd)
+            ) {
+                colorButton(Color.Yellow, android.graphics.Color.YELLOW) {
+                    selectedColor = it
+                    drawingView?.setColor(selectedColor)
+                }
+
+                Spacer(modifier = Modifier.width(8.dp))
+
+                colorButton(Color.Blue, android.graphics.Color.BLUE) {
+                    selectedColor = it
+                    drawingView?.setColor(selectedColor)
+                }
+
+                Spacer(modifier = Modifier.width(8.dp))
+
+                colorButton(Color.Red, android.graphics.Color.RED) {
+                    selectedColor = it
+                    drawingView?.setColor(selectedColor)
+                }
+
+                Spacer(modifier = Modifier.width(8.dp))
+
+                colorButton(Color(0xFF8033FF), android.graphics.Color.rgb(128, 51, 255)) {
+                    selectedColor = it
+                    drawingView?.setColor(selectedColor)
+                }
+
+                Spacer(modifier = Modifier.width(8.dp))
+
+                colorButton(Color.Green, android.graphics.Color.GREEN) {
+                    selectedColor = it
+                    drawingView?.setColor(selectedColor)
+                }
+
+                Spacer(modifier = Modifier.width(8.dp))
+
+                colorButton(Color(0xFFFFA500), android.graphics.Color.rgb(255, 165, 0)) {
+                    selectedColor = it
+                    drawingView?.setColor(selectedColor)
+                }
+            }
+
+            // Caja de texto y botón de enviar
+            Column(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .padding(16.dp)
+            ) {
+                BasicTextField(
+                    value = textState,
+                    onValueChange = { textState = it },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color.White)
+                        .padding(8.dp),
+                    keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(
+                        onDone = {
+                            // Limpia el foco y cierra el teclado cuando se pulsa "Done"
+                            focusManager.clearFocus()
+                            keyboardController?.hide()
                         }
-                    },
-                    modifier = Modifier.fillMaxSize()
+                    )
                 )
 
-                // Botón para borrar
+                Spacer(modifier = Modifier.height(8.dp))
+
                 Button(
                     onClick = {
-                        drawingView?.clearCanvas()  // Llama la función de borrado
+                        if (textState.text.isNotEmpty()) {
+                            // Procesa el texto (por ejemplo, enviarlo o guardarlo)
+                            println("Texto enviado: ${textState.text}")
+
+                            // Limpia el campo de texto después de enviar
+                            textState = TextFieldValue("")
+
+                            // Limpia el foco y oculta el teclado
+                            focusManager.clearFocus()
+                            keyboardController?.hide()
+                        }
                     },
-                    modifier = Modifier
-                        .padding(16.dp)
-                        .align(Alignment.TopStart)
+                    modifier = Modifier.align(Alignment.End)
                 ) {
-                    Text("Borrar", color = Color.White)
+                    Text("Enviar")
                 }
+            }
 
-                // Fila con botones de colores
-                Row(
-                    modifier = Modifier
-                        .padding(16.dp)
-                        .align(Alignment.TopEnd)
-                ) {
-                    colorButton(Color.Yellow, android.graphics.Color.YELLOW) {
-                        selectedColor = it
-                        drawingView?.setColor(selectedColor)
-                    }
+            // Mostrar el nombre del jugador en la parte inferior izquierda debajo del chat
+            Text(
+                text = "Artista: $playerName",
+                modifier = Modifier
+                    .align(Alignment.BottomStart)  // Posiciona el nombre en la parte inferior izquierda
+                    .padding(16.dp),
+                color = Color.Black,
+                style = MaterialTheme.typography.titleLarge
+            )
 
-                    Spacer(modifier = Modifier.width(8.dp))
-
-                    colorButton(Color.Blue, android.graphics.Color.BLUE) {
-                        selectedColor = it
-                        drawingView?.setColor(selectedColor)
-                    }
-
-                    Spacer(modifier = Modifier.width(8.dp))
-
-                    colorButton(Color.Red, android.graphics.Color.RED) {
-                        selectedColor = it
-                        drawingView?.setColor(selectedColor)
-                    }
-
-                    Spacer(modifier = Modifier.width(8.dp))
-
-                    colorButton(Color(0xFF8033FF), android.graphics.Color.rgb(128, 51, 255)) {
-                        selectedColor = it
-                        drawingView?.setColor(selectedColor)
-                    }
-
-                    Spacer(modifier = Modifier.width(8.dp))
-
-                    colorButton(Color.Green, android.graphics.Color.GREEN) {
-                        selectedColor = it
-                        drawingView?.setColor(selectedColor)
-                    }
-
-                    Spacer(modifier = Modifier.width(8.dp))
-
-                    colorButton(Color(0xFFFFA500), android.graphics.Color.rgb(255, 165, 0)) {
-                        selectedColor = it
-                        drawingView?.setColor(selectedColor)
-                    }
-                }
-
-                // Caja de texto y botón de enviar
-                Column(
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .fillMaxWidth()
-                        .padding(16.dp)
-                ) {
-                    BasicTextField(
-                        value = textState,
-                        onValueChange = { textState = it },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(Color.White)
-                            .padding(8.dp),
-                        keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Done),
-                        keyboardActions = KeyboardActions(
-                            onDone = {
-                                // Limpia el foco y cierra el teclado cuando se pulsa "Done"
-                                focusManager.clearFocus()
-                                keyboardController?.hide()
-                            }
-                        )
-                    )
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Button(
-                        onClick = {
-                            if (textState.text.isNotEmpty()) {
-                                // Procesa el texto (por ejemplo, enviarlo o guardarlo)
-                                println("Texto enviado: ${textState.text}")
-
-                                // Limpia el campo de texto después de enviar
-                                textState = TextFieldValue("")
-
-                                // Limpia el foco y oculta el teclado
-                                focusManager.clearFocus()
-                                keyboardController?.hide()
-                            }
-                        },
-                        modifier = Modifier.align(Alignment.End)
-                    ) {
-                        Text("Enviar")
-                    }
-                }
-
-                // Efecto desechable para manejar la limpieza del foco al ocultar el teclado
-                DisposableEffect(Unit) {
-                    onDispose {
-                        focusManager.clearFocus()
-                        keyboardController?.hide()
-                    }
+            // Efecto desechable para manejar la limpieza del foco al ocultar el teclado
+            DisposableEffect(Unit) {
+                onDispose {
+                    focusManager.clearFocus()
+                    keyboardController?.hide()
                 }
             }
         }
