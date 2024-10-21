@@ -53,11 +53,11 @@ fun StartScreen(navController: NavController) {
         Button(
             onClick = {
                 if (playerName.isNotEmpty()) {
-                    navController.navigate("drawing_screen/$playerName")
+                    navController.navigate("role_selection_screen/$playerName")
                 }
             }
         ) {
-            Text(text = "Comenzar a dibujar")
+            Text(text = "Ingresar")
         }
     }
 }

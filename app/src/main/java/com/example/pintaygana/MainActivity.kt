@@ -22,16 +22,30 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.navigation.compose.NavHost
+import java.net.URI
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import java.util.UUID
 
 class MainActivity : ComponentActivity() {
+
+    private lateinit var webSocketClient: DrawingWebSocketClient
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Configura la conexión WebSocket
+        val serverUri = URI("ws://echo.websocket.org") // Cambia la URL por tu servidor WebSocket si es necesario
+        webSocketClient = DrawingWebSocketClient(serverUri)
+        webSocketClient.connect()
+
+        // Usa Jetpack Compose para el contenido de la actividad
         setContent {
             val navController = rememberNavController()
+            val randomId = UUID.randomUUID().toString() // Generar ID aleatorio
 
             NavHost(navController = navController, startDestination = "start_screen") {
                 // Pantalla de inicio para ingresar el nombre
@@ -39,14 +53,34 @@ class MainActivity : ComponentActivity() {
                     StartScreen(navController)
                 }
 
-                // Pantalla de dibujo
-                composable("drawing_screen/{playerName}") { backStackEntry ->
+                composable("role_selection_screen/{playerName}") { backStackEntry ->
                     val playerName = backStackEntry.arguments?.getString("playerName") ?: "Unknown"
-                    DrawingScreen(playerName)
+                    RoleSelectionScreen(navController, playerName, randomId) // Pasar ID aleatorio
+                }
+
+                composable("drawing_screen/{playerName}/{role}/{randomId}") { backStackEntry ->
+                    val playerName = backStackEntry.arguments?.getString("playerName") ?: "Unknown"
+                    val role = backStackEntry.arguments?.getString("role") ?: "guesser"
+                    val id = backStackEntry.arguments?.getString("randomId") ?: "Unknown"
+
+                    // Crea la instancia de DrawingView
+                    val context = LocalContext.current
+                    val drawingView = remember { DrawingView(context, null) }
+
+                    // Pasa los parámetros playerName, role y el drawingView a DrawingScreen
+                    DrawingScreen(playerName, role, drawingView)
                 }
             }
         }
     }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        // Cierra la conexión cuando la actividad sea destruida
+        webSocketClient.close()
+    }
+}
+
 
     // Pantalla de dibujo modificada para recibir y mostrar el nombre del jugador
     @Composable
@@ -220,4 +254,3 @@ class MainActivity : ComponentActivity() {
             contentPadding = PaddingValues(0.dp)
         ) {}
     }
-}
