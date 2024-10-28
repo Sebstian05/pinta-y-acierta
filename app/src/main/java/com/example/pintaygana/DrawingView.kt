@@ -29,9 +29,35 @@ import androidx.core.content.ContextCompat
 import kotlin.random.Random
 
 @Composable
+fun ObjectSelectionScreen(onObjectSelected: (String) -> Unit) {
+    val objects = listOf("Carro", "Perro", "Avión")
+
+    AlertDialog(
+        onDismissRequest = {},
+        title = { Text("Selecciona un objeto para dibujar") },
+        text = {
+            Column {
+                objects.forEach { obj ->
+                    Button(onClick = { onObjectSelected(obj) }) {
+                        Text(obj)
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(onClick = { /* Cierra el diálogo */ }) {
+                Text("Cancelar")
+            }
+        }
+    )
+}
+
+@Composable
 fun DrawingScreen(playerName: String, role: String, drawingView: DrawingView) {
     val isPainter = role == "painter"
     var textState by remember { mutableStateOf("") }
+    var selectedObject by remember { mutableStateOf("") }
+    var showSelectionDialog by remember { mutableStateOf(true) }
 
     // Generar un ID aleatorio al entrar
     val randomID = remember { generateRandomID() }
@@ -41,6 +67,14 @@ fun DrawingScreen(playerName: String, role: String, drawingView: DrawingView) {
     val keyboardController = LocalSoftwareKeyboardController.current
 
     Box(modifier = Modifier.fillMaxSize()) {
+        // Mostrar diálogo de selección de objetos
+        if (showSelectionDialog) {
+            ObjectSelectionScreen { obj ->
+                selectedObject = obj
+                showSelectionDialog = false
+            }
+        }
+
         // Mostrar DrawingView solo si es pintor
         if (isPainter) {
             // Dibujo
@@ -49,12 +83,36 @@ fun DrawingScreen(playerName: String, role: String, drawingView: DrawingView) {
                 modifier = Modifier.fillMaxSize()
             )
 
+            // Texto que muestra el objeto seleccionado
+            Text(
+                text = "Objeto: $selectedObject",
+                modifier = Modifier
+                    .align(Alignment.BottomEnd) // Cambiado a BottomEnd para alineación a la derecha
+                    .padding(16.dp),
+                style = MaterialTheme.typography.titleLarge.copy(color = Color.Black)
+            )
+
             // Paleta de colores y botón de borrador
             Row(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
                     .padding(16.dp)
             ) {
+
+                Box(
+                    modifier = Modifier
+                        .size(50.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFFD3D3D3)) // Color gris claro
+                        .border(2.dp, Color.Black, CircleShape)
+                        .clickable {
+                            drawingView.setColor(android.graphics.Color.LTGRAY)  // Establecer el color como gris claro para "borrar"
+                        },
+                    contentAlignment = Alignment.Center // Centra el contenido dentro del botón
+                ) {
+                    Text(text = "B", color = Color.Black) // Texto dentro del botón
+                }
+                Spacer(modifier = Modifier.width(8.dp))
                 // Paleta de colores
                 ColorButton(Color.Yellow, android.graphics.Color.YELLOW) { drawingView.setColor(it) }
                 Spacer(modifier = Modifier.width(8.dp))
@@ -67,12 +125,8 @@ fun DrawingScreen(playerName: String, role: String, drawingView: DrawingView) {
                 ColorButton(Color.Green, android.graphics.Color.GREEN) { drawingView.setColor(it) }
                 Spacer(modifier = Modifier.width(8.dp))
                 ColorButton(Color(0xFFFFA500), android.graphics.Color.rgb(255, 165, 0)) { drawingView.setColor(it) }
-
-                // Botón de borrador
-                ColorButton(Color.White, android.graphics.Color.WHITE) {
-                    drawingView.setColor(android.graphics.Color.WHITE)  // Establecer el color como blanco para "borrar"
-                    drawingView.changeStrokeWidth(50f)  // Cambia el tamaño del borrador
-                }
+                Spacer(modifier = Modifier.width(8.dp))
+                ColorButton(Color.Black, android.graphics.Color.BLACK) { drawingView.setColor(it) }
             }
         } else {
             // Mostrar chat si no es pintor
@@ -138,15 +192,6 @@ fun generateRandomID(): String {
         .map { allowedChars.random() }
         .joinToString("")
 }
-    
-// Función para generar un ID aleatorio
-private fun generateRandomId(): String {
-    val idLength = 8
-    val chars = ('A'..'Z') + ('0'..'9')
-    return (1..idLength)
-        .map { chars.random() }
-        .joinToString("")
-}
 
 @Composable
 fun ColorButton(color: Color, paintColor: Int, onColorSelected: (Int) -> Unit) {
@@ -169,6 +214,7 @@ class DrawingView(context: Context, attrs: AttributeSet?) : View(context, attrs)
         strokeWidth = 10f
         isAntiAlias = true
     }
+
     private var drawCanvas: Canvas? = null
     private var canvasBitmap: Bitmap? = null
 
@@ -212,20 +258,14 @@ class DrawingView(context: Context, attrs: AttributeSet?) : View(context, attrs)
         return true
     }
 
-    // Función para borrar el lienzo
-    fun clearCanvas() {
-        // Mantiene el fondo gris al borrar
-        drawCanvas?.drawColor(android.graphics.Color.LTGRAY)
-        invalidate()  // Redibuja el lienzo
-    }
-
     // Función para cambiar el color del pincel
     fun setColor(newColor: Int) {
         paint.color = newColor
     }
 
-    // Nueva función para cambiar el grosor del pincel o borrador
-    fun changeStrokeWidth(width: Float) {
-        paint.strokeWidth = width
+    fun clearCanvas() {
+        // Borra el lienzo
+        path.reset()
+        invalidate() // Redibuja la vista
     }
 }
