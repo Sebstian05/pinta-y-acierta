@@ -4,7 +4,6 @@ import android.content.Context
 import android.graphics.*
 import android.util.AttributeSet
 import android.view.MotionEvent
-import androidx.compose.ui.unit.dp
 import android.view.View
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -24,9 +23,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.core.content.ContextCompat
+import androidx.navigation.NavController
 import kotlin.random.Random
+
 
 @Composable
 fun ObjectSelectionScreen(onObjectSelected: (String) -> Unit) {
@@ -67,8 +68,8 @@ fun DrawingScreen(playerName: String, role: String, drawingView: DrawingView) {
     val keyboardController = LocalSoftwareKeyboardController.current
 
     Box(modifier = Modifier.fillMaxSize()) {
-        // Mostrar diálogo de selección de objetos
-        if (showSelectionDialog) {
+        // Mostrar diálogo de selección de objetos solo para el pintor
+        if (isPainter && showSelectionDialog) {
             ObjectSelectionScreen { obj ->
                 selectedObject = obj
                 showSelectionDialog = false
@@ -87,7 +88,7 @@ fun DrawingScreen(playerName: String, role: String, drawingView: DrawingView) {
             Text(
                 text = "Objeto: $selectedObject",
                 modifier = Modifier
-                    .align(Alignment.BottomEnd) // Cambiado a BottomEnd para alineación a la derecha
+                    .align(Alignment.BottomEnd)
                     .padding(16.dp),
                 style = MaterialTheme.typography.titleLarge.copy(color = Color.Black)
             )
@@ -98,19 +99,18 @@ fun DrawingScreen(playerName: String, role: String, drawingView: DrawingView) {
                     .align(Alignment.TopCenter)
                     .padding(16.dp)
             ) {
-
                 Box(
                     modifier = Modifier
                         .size(50.dp)
                         .clip(CircleShape)
-                        .background(Color(0xFFD3D3D3)) // Color gris claro
+                        .background(Color(0xFFD3D3D3))
                         .border(2.dp, Color.Black, CircleShape)
                         .clickable {
-                            drawingView.setColor(android.graphics.Color.LTGRAY)  // Establecer el color como gris claro para "borrar"
+                            drawingView.setColor(android.graphics.Color.LTGRAY)
                         },
-                    contentAlignment = Alignment.Center // Centra el contenido dentro del botón
+                    contentAlignment = Alignment.Center
                 ) {
-                    Text(text = "B", color = Color.Black) // Texto dentro del botón
+                    Text(text = "B", color = Color.Black)
                 }
                 Spacer(modifier = Modifier.width(8.dp))
                 // Paleta de colores
@@ -147,8 +147,8 @@ fun DrawingScreen(playerName: String, role: String, drawingView: DrawingView) {
                     keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Done),
                     keyboardActions = KeyboardActions(
                         onDone = {
-                            focusManager.clearFocus()  // Correcto uso del focusManager
-                            keyboardController?.hide()  // Correcto uso del keyboardController
+                            focusManager.clearFocus()
+                            keyboardController?.hide()
                         }
                     )
                 )
@@ -159,7 +159,7 @@ fun DrawingScreen(playerName: String, role: String, drawingView: DrawingView) {
                     onClick = {
                         if (textState.isNotEmpty()) {
                             println("Texto enviado: $textState")
-                            textState = ""  // Limpia el campo de texto después de enviar
+                            textState = ""
 
                             // Limpia el foco y oculta el teclado
                             focusManager.clearFocus()
@@ -198,11 +198,45 @@ fun ColorButton(color: Color, paintColor: Int, onColorSelected: (Int) -> Unit) {
     Box(
         modifier = Modifier
             .size(50.dp)
-            .clip(CircleShape)  // Círculo en lugar de cuadrado
-            .background(color)  // Color de fondo
-            .border(2.dp, Color.Black, CircleShape)  // Borde alrededor del círculo
-            .clickable { onColorSelected(paintColor) }  // Acción al hacer clic
+            .clip(CircleShape)
+            .background(color)
+            .border(2.dp, Color.Black, CircleShape)
+            .clickable { onColorSelected(paintColor) }
     )
+}
+
+@Composable
+fun DrawingScreenContent(navController: NavController, roomId: String) {
+    var loading by remember { mutableStateOf(true) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(roomId) {
+        kotlinx.coroutines.delay(3000)
+        val roomExists = false
+
+        if (roomExists) {
+            navController.navigate("dibujo/$roomId")
+        } else {
+            errorMessage = "Error al encontrar sala"
+            loading = false
+        }
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        if (loading) {
+            Text(text = "Cargando sala...", color = Color.Gray)
+        } else if (errorMessage != null) {
+            Text(text = errorMessage!!, color = Color.Red)
+        } else {
+            Text(text = "Sala cargada correctamente")
+        }
+    }
 }
 
 // Clase DrawingView para manejar la lógica del lienzo
@@ -226,11 +260,8 @@ class DrawingView(context: Context, attrs: AttributeSet?) : View(context, attrs)
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
-
-        // Establece el fondo gris
         canvas.drawColor(android.graphics.Color.LTGRAY)
 
-        // Dibuja la imagen anterior si existe
         canvasBitmap?.let {
             canvas.drawBitmap(it, 0f, 0f, null)
         }
@@ -258,14 +289,13 @@ class DrawingView(context: Context, attrs: AttributeSet?) : View(context, attrs)
         return true
     }
 
-    // Función para cambiar el color del pincel
     fun setColor(newColor: Int) {
         paint.color = newColor
     }
 
     fun clearCanvas() {
-        // Borra el lienzo
+        drawCanvas?.drawColor(android.graphics.Color.TRANSPARENT, PorterDuff.Mode.CLEAR)
         path.reset()
-        invalidate() // Redibuja la vista
+        invalidate()
     }
 }
